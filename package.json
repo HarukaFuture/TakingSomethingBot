@@ -1,0 +1,30 @@
+{
+  "name": "taksthbot",
+  "version": "1.0.0",
+  "description": "t.me/takingsomethingbot",
+  "main": "bot.js",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.2",
+    "sharp": "^0.21.1",
+    "superagent": "^4.0.0",
+    "telegraf": "^3.25.5"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HarukaFuture/TakingSomethingBot.git"
+  },
+  "keywords": [
+    "telegram",
+    "bot"
+  ],
+  "author": "HarukaFuture",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/HarukaFuture/TakingSomethingBot/issues"
+  },
+  "homepage": "https://github.com/HarukaFuture/TakingSomethingBot#readme"
+}
