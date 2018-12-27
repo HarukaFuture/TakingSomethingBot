@@ -36,16 +36,16 @@ bot.startPolling();
 //function	
 async function inlineGet(ctx){
 	var me = await getMeAvatar()
-	if (ctx.inlineQuery.query == ''){		
-		let avatarLink = await getUserAvatarLink(ctx.inlineQuery.from.username);
-		if (avatarLink == ''){
+	if (ctx.inlineQuery.query == ''){//如果inline查询为空	
+		let avatarLink = await getUserAvatarLink(ctx.inlineQuery.from.username);//get查询者的用户头像链接
+		if (avatarLink == ''){//如果查询者没有头像
 			ctx.answerInlineQuery([{
 				type:'sticker',
 				id:'1',
 				sticker_file_id:me
-			}],{is_personal:true})
+			}],{is_personal:true})//则发送bot的头像
 		}else{
-			var stickerID = await getStickerFile(ctx,avatarLink);			
+			var stickerID = await getStickerFile(ctx,avatarLink);	//如果有头像		
 			ctx.answerInlineQuery([{
 				type:'sticker',
 				id:'1',
@@ -55,16 +55,16 @@ async function inlineGet(ctx){
 				type:'sticker',
 				id:'2',
 				sticker_file_id:me
-			}],{cache_time:600,is_personal:true})
+			}],{cache_time:600,is_personal:true})//发送自己的和bot的
 		}
-		return
+		return //结束函数线程
 	}
-	if (ctx.inlineQuery.query.charAt(0) == '@'){
+	if (ctx.inlineQuery.query.charAt(0) == '@'){//@用户名/用户名自动切换
 		var avatarLink = await getUserAvatarLink(ctx.inlineQuery.query.substr(1));
 	}else{
 		var avatarLink = await getUserAvatarLink(ctx.inlineQuery.query);
 	}	
-	if (avatarLink == ''){
+	if (avatarLink == ''){//如果查询内用户名没有头像
 		ctx.answerInlineQuery([{
 			type:'article',
 			id:'1',
@@ -72,7 +72,7 @@ async function inlineGet(ctx){
 			input_message_content:{message_text:"用户名不存在或此用户未设置头像"}
 		}])
 	}else{
-		var stickerID = await getStickerFile(ctx,avatarLink);
+		var stickerID = await getStickerFile(ctx,avatarLink);//如果有
 		ctx.answerInlineQuery([{
 			type:'sticker',
 			id:'1',
@@ -80,14 +80,14 @@ async function inlineGet(ctx){
 		}],{cache_time:600})
 	}
 }
-async function getStickerFile(ctx,avatarLink){
+async function getStickerFile(ctx,avatarLink){//TODO:可扩展重写 获取贴纸ID
 	var avatarData = request.get(avatarLink);
 	var pict = await genPicPNG(genCircleAvatar(avatarData));
 	var file = await bot.telegram.sendSticker(config.logchannel,{source:pict});
 	bot.telegram.sendMessage(config.logchannel,'```\n'+`${JSON.stringify({queryContext:ctx.inlineQuery,stickerInfo:file.sticker})}`+'\n```',{'reply_to_message_id':file.message_id,parse_mode:'Markdown'})
 	return file.sticker.file_id;
 }
-async function commandGet(ctx,username){
+async function commandGet(ctx,username){//命令行
 	var avatarLink = await getUserAvatarLink(username)
 	if (avatarLink == ''){
 		ctx.reply('用户名不存在或此用户未设置头像!')
@@ -131,7 +131,7 @@ function streamToBuffer(stream) {
     stream.on('end', () => resolve(Buffer.concat(buffers)))
   });
 }
-async function getMeAvatar(){
+async function getMeAvatar(){//获取机器人的头像
 	var avatar = JSON.parse(fs.readFileSync('botavatarcache.json','utf8'))
 	if (avatar.avatarid == null){
 		var me = await getStickerFile('',await getUserAvatarLink(bot.options.username))
