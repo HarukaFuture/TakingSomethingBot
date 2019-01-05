@@ -10,22 +10,23 @@ const request = require('superagent');
 //define
 const bot = new Telegraf(config.apikey);
 const roundedCorners = new Buffer('<svg><circle r="90" cx="90" cy="90"/></svg>');
-//file
-try{
-	fs.accessSync('botavatarcache.json')
-}catch(err){
-	fs.writeFileSync('botavatarcache.json','{}')
-}
+
 //bot
 bot.telegram.getMe().then((botInfo) => {bot.options.username = botInfo.username})
 bot.on('inline_query',(ctx)=>{inlineGet(ctx);console.log(ctx.inlineQuery)});
 bot.command('take',(ctx)=>{
-	var username = ctx.message.text.substr(ctx.message.entities[0]['length']+1);
-	if (username.charAt(0) == '@'){
-		commandGet(ctx,username.substr(1));
-	}else{
-		commandGet(ctx,username);
+	try{
+		console.log(ctx.message.reply_to_message.from.id)
+	}catch{
+		var username = ctx.message.text.substr(ctx.message.entities[0]['length']+1);
+		if (username.charAt(0) == '@'){
+			commandGet(ctx,username.substr(1));
+		}else{
+			commandGet(ctx,username);
+		}
+		return
 	}
+	commandReplyGen(ctx,ctx.message.reply_to_message.from.id);
 });
 bot.help((ctx)=>{ctx.reply('摸摸头 /take @用户名',{'reply_to_message_id':ctx.message.message_id})})
 bot.command('about',(ctx)=>{ctx.replyWithMarkdown(`[本Bot图片素材来源](https://github.com/Sodium-Aluminate/Take-StickerPack)
@@ -36,16 +37,17 @@ bot.startPolling();
 //function	
 async function inlineGet(ctx){
 	var me = await getMeAvatar()
-	if (ctx.inlineQuery.query == ''){//如果inline查询为空	
-		let avatarLink = await getUserAvatarLink(ctx.inlineQuery.from.username);//get查询者的用户头像链接
-		if (avatarLink == ''){//如果查询者没有头像
+	console.log(me);
+	if (ctx.inlineQuery.query == ''){		
+		let avatarLink = await getUserAvatarLink(ctx.inlineQuery.from.username);
+		if (avatarLink == ''){
 			ctx.answerInlineQuery([{
 				type:'sticker',
 				id:'1',
 				sticker_file_id:me
-			}],{is_personal:true})//则发送bot的头像
+			}],{is_personal:true})
 		}else{
-			var stickerID = await getStickerFile(ctx,avatarLink);	//如果有头像		
+			var stickerID = await getStickerFile(ctx,avatarLink);			
 			ctx.answerInlineQuery([{
 				type:'sticker',
 				id:'1',
@@ -55,16 +57,16 @@ async function inlineGet(ctx){
 				type:'sticker',
 				id:'2',
 				sticker_file_id:me
-			}],{cache_time:600,is_personal:true})//发送自己的和bot的
+			}],{cache_time:600,is_personal:true})
 		}
-		return //结束函数线程
+		return
 	}
-	if (ctx.inlineQuery.query.charAt(0) == '@'){//@用户名/用户名自动切换
+	if (ctx.inlineQuery.query.charAt(0) == '@'){
 		var avatarLink = await getUserAvatarLink(ctx.inlineQuery.query.substr(1));
 	}else{
 		var avatarLink = await getUserAvatarLink(ctx.inlineQuery.query);
 	}	
-	if (avatarLink == ''){//如果查询内用户名没有头像
+	if (avatarLink == ''){
 		ctx.answerInlineQuery([{
 			type:'article',
 			id:'1',
@@ -72,7 +74,7 @@ async function inlineGet(ctx){
 			input_message_content:{message_text:"用户名不存在或此用户未设置头像"}
 		}])
 	}else{
-		var stickerID = await getStickerFile(ctx,avatarLink);//如果有
+		var stickerID = await getStickerFile(ctx,avatarLink);
 		ctx.answerInlineQuery([{
 			type:'sticker',
 			id:'1',
@@ -80,17 +82,17 @@ async function inlineGet(ctx){
 		}],{cache_time:600})
 	}
 }
-async function getStickerFile(ctx,avatarLink){//TODO:可扩展重写 获取贴纸ID
+async function getStickerFile(ctx,avatarLink){
 	var avatarData = request.get(avatarLink);
 	var pict = await genPicPNG(genCircleAvatar(avatarData));
 	var file = await bot.telegram.sendSticker(config.logchannel,{source:pict});
 	bot.telegram.sendMessage(config.logchannel,'```\n'+`${JSON.stringify({queryContext:ctx.inlineQuery,stickerInfo:file.sticker})}`+'\n```',{'reply_to_message_id':file.message_id,parse_mode:'Markdown'})
 	return file.sticker.file_id;
 }
-async function commandGet(ctx,username){//命令行
+async function commandGet(ctx,username){
 	var avatarLink = await getUserAvatarLink(username)
 	if (avatarLink == ''){
-		ctx.reply('用户名不存在或此用户未设置头像!')
+		ctx.reply('用户名不存在或此用户未设置头像!',{'reply_to_message_id':ctx.message.message_id})
 	}else{
 		var avatarData = request.get(avatarLink);
 		var pict = await genPicPNG(genCircleAvatar(avatarData))
@@ -131,12 +133,29 @@ function streamToBuffer(stream) {
     stream.on('end', () => resolve(Buffer.concat(buffers)))
   });
 }
-async function getMeAvatar(){//获取机器人的头像
-	var avatar = JSON.parse(fs.readFileSync('botavatarcache.json','utf8'))
+async function getMeAvatar(){
+	var avatar = JSON.parse(fs.readFileSync('meavatar.json','utf8'))
 	if (avatar.avatarid == null){
 		var me = await getStickerFile('',await getUserAvatarLink(bot.options.username))
-		fs.writeFileSync('botavatarcache.json',JSON.stringify({avatarid:me}))
+		fs.writeFileSync('meavatar.json',JSON.stringify({avatarid:me}))
 		return me
 	}
 	return avatar.avatarid
+}
+async function commandReplyGen(ctx,fromid){
+	var avatarLink = await getAvatarByID(fromid)
+	if (avatarLink == ''){
+		ctx.reply('此用户未设置头像!',{'reply_to_message_id':ctx.message.message_id})
+	}else{
+		var avatarData = request.get(avatarLink);
+		var pict = await genPicPNG(genCircleAvatar(avatarData))
+		ctx.replyWithSticker({source:pict},{'reply_to_message_id':ctx.message.message_id})
+	}
+}
+async function getAvatarByID(id){
+	let avatars = await bot.telegram.getUserProfilePhotos(id,0,1)
+	try{console.log(avatars.photos[0][2])}catch{return ''}
+	let link = await bot.telegram.getFileLink(avatars.photos[0][2].file_id)
+	console.log(link)
+	return link
 }
